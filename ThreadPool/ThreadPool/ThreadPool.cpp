@@ -35,9 +35,9 @@ ThreadPool::~ThreadPool() {
 	m_allStop = true;
 	m_condition.notify_all();
 	m_runningThreadCount = 0;
-//	for (Worker& worker : m_threads) {
-//		this->GetThread(worker).join();
-//	}
+	for (auto& iter : m_threads) {
+		iter.second.join();
+	}
 
 }
 void ThreadPool::EnqueueJob(std::function<void(void)> _job) {

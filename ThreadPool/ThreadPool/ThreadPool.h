@@ -38,8 +38,8 @@ private:
 		void operator()(ThreadPool& _threadPool);
 
 	private:
-		ThreadState m_state = ThreadState::None;
-		std::chrono::system_clock::time_point m_allocTime;
+		ThreadState m_state = ThreadState::None; //Thread state
+		std::chrono::system_clock::time_point m_allocTime; //Manage waiting time 
 	};
 
 //	using WorkerThread = std::tuple<ThreadState, std::thread>;
@@ -72,8 +72,6 @@ private:
 	std::thread* m_watchThread = nullptr;
 	std::queue<std::function<void(void)> > m_jobQueue;
 	std::list<WorkerThread> m_threads;
-	//std::list<std::thread> m_threads;
-
 };
 
 //Thread
