@@ -5,9 +5,8 @@
 #include <list>
 #include <mutex>
 #include <functional>
+#include <chrono>
 #include "Singleton.h"
-
-
 
 /*
 *	NOTE
@@ -33,25 +32,35 @@ enum class ThreadState : uint8_t {
 
 class ThreadPool : public Singleton<ThreadPool>{
 private:
+	class Worker {
+	public:
+		Worker();
+		void operator()(ThreadPool& _threadPool);
 
-	using Worker = std::tuple<ThreadState, std::thread>;
+	private:
+		ThreadState m_state = ThreadState::None;
+		std::chrono::system_clock::time_point m_allocTime;
+	};
 
+//	using WorkerThread = std::tuple<ThreadState, std::thread>;
+	using WorkerThread = std::pair<Worker, std::thread>;
 public:
 	void EnqueueJob(std::function<void(void)> _job);
+	void Initialize(uint32_t _threadCnt = 0);
 
 private:
 	DECLARE_SINGLETON(ThreadPool)
+	friend class ThreadPool;
 
-	void Initialize();
-	void WorkerThread(); //run in the thread
-	void AllocationThread(); //스레드 추가 할당
+//	void WorkerThread(); //run in the thread
+	void AllocationThread(uint32_t _threadCnt); //스레드 추가 할당
 	void DeallocateThread();
 	void WatchThread(); //스레드 수가 부족하면 추가 할당
 
-	ThreadState GetThreadState(Worker& worker) const { return std::get<0>(worker); }
-	std::thread& GetThread(Worker& worker) const { return std::get<1>(worker); }
-	void SetThreadStateRunning(Worker& worker) { std::get<0>(worker) = ThreadState::Running; }
-	void SetThreadStateIdle(Worker& worker) { std::get<0>(worker) = ThreadState::Idle; }
+//	ThreadState GetThreadState(Worker& worker) const { return std::get<0>(worker); }
+//	std::thread& GetThread(Worker& worker) const { return std::get<1>(worker); }
+//	void SetThreadStateRunning(Worker& worker) { std::get<0>(worker) = ThreadState::Running; }
+//	void SetThreadStateIdle(Worker& worker) { std::get<0>(worker) = ThreadState::Idle; }
 
 	const size_t m_cpuCoresCount = std::thread::hardware_concurrency();
 
@@ -62,6 +71,115 @@ private:
 	
 	std::thread* m_watchThread = nullptr;
 	std::queue<std::function<void(void)> > m_jobQueue;
-	std::list<Worker> m_threads;
+	std::list<WorkerThread> m_threads;
 	//std::list<std::thread> m_threads;
+
 };
+
+//Thread
+
+#pragma region General
+
+template<typename T_Type>
+class Thread {
+public:
+	template<typename T_Func, typename... T_Args,
+		typename std::enable_if_t<std::is_function<T_Func>::value>* = nullptr>
+		Thread(T_Func&, const T_Args&...);
+	Thread() = default;
+	~Thread() = default;
+
+	template<typename T_Func, typename... T_Args,
+		typename std::enable_if_t<std::is_function<T_Func>::value>* = nullptr>
+		void Start(T_Func&, const T_Args&...);
+
+	bool IsWorking() const { return m_isDone; }
+	void WaitResult(); // Block the process until the thread's operation is complete
+	T_Type GetReturn(); // Block the process until the thread's operation is complete and get return value
+
+private:
+	bool m_isDone = false;
+	T_Type m_returnValue;
+
+};
+
+
+/////////////////////////////////////////////////////////////////////////////
+
+template<typename T_Type>
+template<typename T_Func, typename... T_Args,
+	typename std::enable_if_t<std::is_function<T_Func>::value>* >
+	Thread<T_Type>::Thread(T_Func& func, const T_Args&... args) {
+	ThreadPool::GetSingleton()->EnqueueJob([this, func, args...]()-> void {
+		m_returnValue = func(args...);
+		m_isDone = true;
+	});
+}
+
+template<typename T_Type>
+template<typename T_Func, typename... T_Args,
+	typename std::enable_if_t<std::is_function<T_Func>::value>* >
+	void Thread<T_Type>::Start(T_Func& func, const T_Args&... args) {
+	ThreadPool::GetSingleton()->EnqueueJob([this, func, args...]()-> void {
+		m_returnValue = func(args...);
+		m_isDone = true;
+	});
+}
+
+template<typename T_Type>
+void Thread<T_Type>::WaitResult() {
+	while (false == m_isDone) {}
+}
+
+template<typename T_Type>
+T_Type Thread<T_Type>::GetReturn() {
+	this->WaitResult();
+	return m_returnValue;
+}
+#pragma endregion 
+
+#pragma region Handle void specialized
+//반환형이 void일 경우 처리
+//Handle if return type is 'void'
+template<>
+class Thread<void> {
+public:
+	template<typename T_Func, typename... T_Args,
+		typename std::enable_if_t<std::is_function<T_Func>::value>* = nullptr>
+		Thread(T_Func&, const T_Args&...);
+	Thread() = default;
+	~Thread() = default;
+
+	template<typename T_Func, typename... T_Args,
+		typename std::enable_if_t<std::is_function<T_Func>::value>* = nullptr>
+		void Start(T_Func&, const T_Args&...);
+
+	bool IsWorking() const { return m_isDone; }
+	void WaitResult(); // Block the process until the thread's operation is complete
+
+private:
+	bool m_isDone = false;
+};
+
+/////////////////////////////////////////////////////////////////////////////
+
+template<typename T_Func, typename... T_Args,
+	typename std::enable_if_t<std::is_function<T_Func>::value>* >
+	Thread<void>::Thread(T_Func& func, const T_Args&... args) {
+	ThreadPool::GetSingleton()->EnqueueJob([this, func, args...]()-> void {
+		func(args...);
+		m_isDone = true;
+	});
+}
+
+template<typename T_Func, typename... T_Args,
+	typename std::enable_if_t<std::is_function<T_Func>::value>* >
+	void Thread<void>::Start(T_Func& func, const T_Args&... args) {
+	ThreadPool::GetSingleton()->EnqueueJob([this, func, args...]()-> void {
+		func(args...);
+		m_isDone = true;
+	});
+}
+
+
+#pragma endregion 
