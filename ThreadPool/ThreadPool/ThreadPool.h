@@ -35,14 +35,13 @@ private:
 	class Worker {
 	public:
 		Worker();
-		void operator()(ThreadPool& _threadPool);
+		void operator()();
 
 	private:
 		ThreadState m_state = ThreadState::None; //Thread state
 		std::chrono::system_clock::time_point m_allocTime; //Manage waiting time 
 	};
 
-//	using WorkerThread = std::tuple<ThreadState, std::thread>;
 	using WorkerThread = std::pair<Worker, std::thread>;
 public:
 	void EnqueueJob(std::function<void(void)> _job);
@@ -62,13 +61,10 @@ private:
 //	void SetThreadStateRunning(Worker& worker) { std::get<0>(worker) = ThreadState::Running; }
 //	void SetThreadStateIdle(Worker& worker) { std::get<0>(worker) = ThreadState::Idle; }
 
-	const size_t m_cpuCoresCount = std::thread::hardware_concurrency();
-
 	std::mutex m_mutex;
 	std::condition_variable m_condition;
 	bool m_allStop = false;
-	int m_runningThreadCount = 0;
-	
+		
 	std::thread* m_watchThread = nullptr;
 	std::queue<std::function<void(void)> > m_jobQueue;
 	std::list<WorkerThread> m_threads;

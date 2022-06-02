@@ -5,40 +5,43 @@ ThreadPool::Worker::Worker() {
 	m_state = ThreadState::Idle;
 }
 
-void ThreadPool::Worker::operator()(ThreadPool& _threadPool) {
-	while (true) {
-		std::unique_lock<std::mutex> lock(_threadPool.m_mutex);
-		_threadPool.m_condition.wait(lock, [&_threadPool]()-> bool { // ture 반환시 대기를 멈추고 진행 //If it returns a value of true, stop waiting and continue
-			return false == _threadPool.m_jobQueue.empty() || true == _threadPool.m_allStop;
-			});
-		if (true == _threadPool.m_jobQueue.empty() && true == _threadPool.m_allStop) return; //모든 스레드 중지
+void ThreadPool::Worker::operator()() {
+	auto threadPool = ThreadPool::GetSingleton();
+	if (nullptr == threadPool)
+		return;
 
-		std::function<void(void)> job = std::move(_threadPool.m_jobQueue.front());
-		_threadPool.m_jobQueue.pop();
-		++_threadPool.m_runningThreadCount;
+	while (true) {
+		std::unique_lock<std::mutex> lock(threadPool->m_mutex);
+		threadPool->m_condition.wait(lock, [&threadPool]()-> bool { // ture 반환시 대기를 멈추고 진행 //If it returns a value of true, stop waiting and continue
+			return false == threadPool->m_jobQueue.empty() || true == threadPool->m_allStop;
+			});
+		if (true == threadPool->m_jobQueue.empty() && true == threadPool->m_allStop) return; //모든 스레드 중지
+
+		std::function<void(void)> job = std::move(threadPool->m_jobQueue.front());
+		threadPool->m_jobQueue.pop();
 		lock.unlock();
 
 		//Do work
+		m_allocTime = std::chrono::system_clock::now();
+		m_state = ThreadState::Running;
 		job();
-
+		m_state = ThreadState::Idle;
 		lock.lock();
-		--_threadPool.m_runningThreadCount;
 	}
 }
 
 ThreadPool::ThreadPool() { //Create thread
-    this->Initialize();
 }
 
 ThreadPool::~ThreadPool() {
 	//waiting for thread what is unfinished         
 	m_allStop = true;
 	m_condition.notify_all();
-	m_runningThreadCount = 0;
+	
 	for (auto& iter : m_threads) {
 		iter.second.join();
 	}
-
+	m_watchThread->join();
 }
 void ThreadPool::EnqueueJob(std::function<void(void)> _job) {
 	std::unique_lock<std::mutex> lock(m_mutex);
@@ -52,39 +55,15 @@ void ThreadPool::Initialize(uint32_t _threadCnt) {
 	this->AllocationThread(_threadCnt); // threadPool 초기 생성
 	this->WatchThread(); // 감시 스레드 생성
 }
-/*
-void ThreadPool::WorkerThread() {
-	
-	while (true) {
-		std::unique_lock<std::mutex> lock(m_mutex);
-		m_condition.wait(lock, [this]()-> bool { // ture 반환시 대기를 멈추고 진행 //If it returns a value of true, stop waiting and continue
-			return false == m_jobQueue.empty() || true == m_allStop;
-			});
-		if (true == m_jobQueue.empty() && true == m_allStop) return; //모든 스레드 중지
 
-		std::function<void(void)> job = std::move(m_jobQueue.front());
-		m_jobQueue.pop();
-		++m_runningThreadCount;
-		lock.unlock();
-
-		//Do work
-		job();
-
-		lock.lock();
-		--m_runningThreadCount;
-	}
-	
-}
-*/
 void ThreadPool::AllocationThread(uint32_t _threadCnt) {
 	//Create threads as many as cpu's thread
 	if (0 == _threadCnt)
-		_threadCnt = m_cpuCoresCount;
+		_threadCnt = std::thread::hardware_concurrency();;
 
 	for (int count = 0; count < _threadCnt; ++count) {
 		Worker worker;
-		m_threads.emplace_back(worker, [&worker, this]()->void { worker(*this); });
-//		m_threads.emplace_back(std::make_tuple(ThreadState::Idle, [this]()->void { this->WorkerThread(); }));
+		m_threads.emplace_back(worker, worker);	
 	}
 }
 
@@ -96,17 +75,4 @@ void ThreadPool::WatchThread() {
 		return;
 	
 	m_watchThread = new std::thread();
-//	auto watchDog = [this]()-> void {
-//		int idleThreadCount = 0;
-//		while (true) {
-//			if (0 <= m_runningThreadCount) //동작중인 스레드가 없을 경우 종료
-//				break;
-//
-//			idleThreadCount = m_runningThreadCount - m_threads.size();
-//
-//
-//
-//		}
-//	};
-
 }
