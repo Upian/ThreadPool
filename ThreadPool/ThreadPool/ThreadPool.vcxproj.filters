@@ -25,7 +25,7 @@
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="ThreadPool.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>ThreadPool</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -37,7 +37,7 @@ ThreadPool::~ThreadPool() {
 	//waiting for thread what is unfinished         
 	m_allStop = true;
 	m_condition.notify_all();
-	
+
 	for (auto& iter : m_threads) {
 		iter.second.join();
 	}
@@ -61,9 +61,9 @@ void ThreadPool::AllocationThread(uint32_t _threadCnt) {
 	if (0 == _threadCnt)
 		_threadCnt = std::thread::hardware_concurrency();;
 
-	for (int count = 0; count < _threadCnt; ++count) {
+	for (uint32_t count = 0; count < _threadCnt; ++count) {
 		Worker worker;
-		m_threads.emplace_back(worker, worker);	
+		m_threads.emplace_back(worker, worker);
 	}
 }
 
@@ -73,6 +73,6 @@ void ThreadPool::DeallocateThread() {
 void ThreadPool::WatchThread() {
 	if (nullptr != m_watchThread)
 		return;
-	
+
 	m_watchThread = new std::thread();
 }
