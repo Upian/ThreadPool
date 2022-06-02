@@ -79,13 +79,13 @@ class Thread {
 public:
 	template<typename T_Func, typename... T_Args,
 		typename std::enable_if_t<std::is_function<T_Func>::value>* = nullptr>
-		Thread(T_Func&, const T_Args&...);
+		Thread(T_Func&, T_Args&...);
 	Thread() = default;
 	~Thread() = default;
 
 	template<typename T_Func, typename... T_Args,
 		typename std::enable_if_t<std::is_function<T_Func>::value>* = nullptr>
-		void Start(T_Func&, const T_Args&...);
+		void Start(T_Func&, T_Args&...);
 
 	bool IsWorking() const { return m_isDone; }
 	void WaitResult(); // Block the process until the thread's operation is complete
@@ -103,8 +103,8 @@ private:
 template<typename T_Type>
 template<typename T_Func, typename... T_Args,
 	typename std::enable_if_t<std::is_function<T_Func>::value>* >
-	Thread<T_Type>::Thread(T_Func& func, const T_Args&... args) {
-	ThreadPool::GetSingleton()->EnqueueJob([this, func, args...]()-> void {
+	Thread<T_Type>::Thread(T_Func& func, T_Args&... args) {
+	ThreadPool::GetSingleton()->EnqueueJob([this, &func, &args...]()-> void {
 		m_returnValue = func(args...);
 		m_isDone = true;
 	});
@@ -113,8 +113,8 @@ template<typename T_Func, typename... T_Args,
 template<typename T_Type>
 template<typename T_Func, typename... T_Args,
 	typename std::enable_if_t<std::is_function<T_Func>::value>* >
-	void Thread<T_Type>::Start(T_Func& func, const T_Args&... args) {
-	ThreadPool::GetSingleton()->EnqueueJob([this, func, args...]()-> void {
+	void Thread<T_Type>::Start(T_Func& func, T_Args&... args) {
+	ThreadPool::GetSingleton()->EnqueueJob([this, &func, &args...]()-> void {
 		m_returnValue = func(args...);
 		m_isDone = true;
 	});
@@ -140,13 +140,13 @@ class Thread<void> {
 public:
 	template<typename T_Func, typename... T_Args,
 		typename std::enable_if_t<std::is_function<T_Func>::value>* = nullptr>
-		Thread(T_Func&, const T_Args&...);
+		Thread(T_Func&, T_Args&...);
 	Thread() = default;
 	~Thread() = default;
 
 	template<typename T_Func, typename... T_Args,
 		typename std::enable_if_t<std::is_function<T_Func>::value>* = nullptr>
-		void Start(T_Func&, const T_Args&...);
+		void Start(T_Func&, T_Args&...);
 
 	bool IsWorking() const { return m_isDone; }
 	void WaitResult(); // Block the process until the thread's operation is complete
@@ -159,8 +159,8 @@ private:
 
 template<typename T_Func, typename... T_Args,
 	typename std::enable_if_t<std::is_function<T_Func>::value>* >
-	Thread<void>::Thread(T_Func& func, const T_Args&... args) {
-	ThreadPool::GetSingleton()->EnqueueJob([this, func, args...]()-> void {
+	Thread<void>::Thread(T_Func& func, T_Args&... args) {
+	ThreadPool::GetSingleton()->EnqueueJob([this, &func, &args...]()-> void {
 		func(args...);
 		m_isDone = true;
 	});
@@ -168,12 +168,11 @@ template<typename T_Func, typename... T_Args,
 
 template<typename T_Func, typename... T_Args,
 	typename std::enable_if_t<std::is_function<T_Func>::value>* >
-	void Thread<void>::Start(T_Func& func, const T_Args&... args) {
-	ThreadPool::GetSingleton()->EnqueueJob([this, func, args...]()-> void {
+	void Thread<void>::Start(T_Func& func, T_Args&... args) {
+	ThreadPool::GetSingleton()->EnqueueJob([this, &func, &args...]()-> void {
 		func(args...);
 		m_isDone = true;
 	});
 }
-
 
 #pragma endregion 
