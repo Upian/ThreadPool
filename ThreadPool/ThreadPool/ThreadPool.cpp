@@ -5,7 +5,7 @@ ThreadPool::Worker::Worker() {
 	m_state = ThreadState::Idle;
 }
 
-void ThreadPool::Worker::operator()() {
+void ThreadPool::Worker::Run() {
 	auto threadPool = ThreadPool::GetSingleton();
 	if (nullptr == threadPool)
 		return;
@@ -63,7 +63,7 @@ void ThreadPool::AllocationThread(uint32_t _threadCnt) {
 
 	for (uint32_t count = 0; count < _threadCnt; ++count) {
 		Worker worker;
-		m_threads.emplace_back(worker, worker);
+		m_threads.emplace_back(worker, [&worker]()->void { worker.Run();});
 	}
 }
 

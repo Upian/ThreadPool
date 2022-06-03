@@ -36,7 +36,7 @@ private:
 	public:
 		Worker();
 		void operator()();
-
+		void Run();
 	private:
 		ThreadState m_state = ThreadState::None; //Thread state
 		std::chrono::system_clock::time_point m_allocTime; //Manage waiting time 
