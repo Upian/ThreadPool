@@ -5,7 +5,6 @@
 #include <list>
 #include <mutex>
 #include <functional>
-#include <chrono>
 #include "Singleton.h"
 
 /*
@@ -36,9 +35,10 @@ private:
 	public:
 		Worker();
 		void Run();
+
+		ThreadState GetState() const { return m_state; }
 	private:
 		ThreadState m_state = ThreadState::None; //Thread state
-		std::chrono::system_clock::time_point m_allocTime; //Manage waiting time 
 	};
 
 	using WorkerThread = std::pair<Worker, std::thread>;
@@ -63,7 +63,8 @@ private:
 	std::mutex m_mutex;
 	std::condition_variable m_condition;
 	bool m_allStop = false;
-		
+
+
 	std::thread* m_watchThread = nullptr;
 	std::queue<std::function<void(void)> > m_jobQueue;
 	std::list<WorkerThread> m_threads;

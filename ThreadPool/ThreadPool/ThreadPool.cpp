@@ -22,7 +22,6 @@ void ThreadPool::Worker::Run() {
 		lock.unlock();
 
 		//Do work
-		m_allocTime = std::chrono::system_clock::now();
 		m_state = ThreadState::Running;
 		job();
 		m_state = ThreadState::Idle;
@@ -70,9 +69,23 @@ void ThreadPool::AllocationThread(uint32_t _threadCnt) {
 void ThreadPool::DeallocateThread() {
 }
 
+/*
+* 장시간 사용 안 하는 스레드 소멸
+* 총 스레드 수와 활성화된 스레드 수를 비교하여 
+* Idle상태일 경우 제거
+* m_jobQueue가 비워지는 시간 계산하여 추가 할당 여부 판별 필요
+*/
+
 void ThreadPool::WatchThread() {
 	if (nullptr != m_watchThread)
 		return;
 
-	m_watchThread = new std::thread();
+	m_watchThread = new std::thread(
+		[this]()->void {
+			while (false == m_allStop) {
+				m_threads.size();
+
+			}
+		}
+	);
 }
