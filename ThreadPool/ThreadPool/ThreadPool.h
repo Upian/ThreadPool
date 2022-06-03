@@ -35,7 +35,6 @@ private:
 	class Worker {
 	public:
 		Worker();
-		void operator()();
 		void Run();
 	private:
 		ThreadState m_state = ThreadState::None; //Thread state
