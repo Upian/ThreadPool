@@ -34,14 +34,14 @@ private:
 	class Worker {
 	public:
 		Worker();
-		void Run();
+		void Run(std::stop_token _token);
 
 		ThreadState GetState() const { return m_state; }
 	private:
 		ThreadState m_state = ThreadState::None; //Thread state
 	};
 
-	using WorkerThread = std::pair<Worker, std::thread>;
+	using WorkerThread = std::pair<Worker, std::jthread>;
 public:
 	void EnqueueJob(std::function<void(void)> _job);
 	void Initialize(uint32_t _threadCnt = 0);
@@ -65,7 +65,7 @@ private:
 	bool m_allStop = false;
 
 
-	std::thread* m_watchThread = nullptr;
+	std::jthread* m_watchThread = nullptr;
 	std::queue<std::function<void(void)> > m_jobQueue;
 	std::list<WorkerThread> m_threads;
 };
